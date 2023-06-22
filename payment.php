@@ -1,122 +1,55 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-</head>
-<body>
-    <?php
-        define('USER_ID', '');
-        define('API_KEY', '');
+<?php
+    include "accesstoken.php";
+    $phone = '256772123456';
+    $url = "https://sandbox.momodeveloper.mtn.com/collection/v1_0/requesttopay";
+    $headers = array(
+        'Authorization: Bearer '.$access_token,
+        'X-Reference-Id: '. $reference_id,
+        'X-Target-Environment: sandbox',
+        'Content-Type: application/json',
+        'Ocp-Apim-Subscription-Key: '.$secodary_key
+    );
 
-        
-        function get_api_user() {
-            $token = get_uuid();
-            $api_key = '';
+    $external_id = rand(10000000, 99999999);
 
-            $post_data = array(
-                'providerCallbackHost' => 'https://localhost',
-            );
-
-            $curl = curl_init();
-            curl_setopt($curl, CURLOPT_POST, 1);
-            curl_setopt($curl, CURLOPT_POSTFIELDS, $post_data);
-            curl_setopt($curl, CURLOPT_URL, 'https://sandbox.momodeveloper.mtn.com/v1_0/apiuser');
-            curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
-            curl_setopt(
-                $curl,
-                CURLOPT_HTTPHEADER,
-                array(
-                    'Content-Type: application/json',
-                    'X-Reference-Id: ' . $token,
-                    'Ocp-Apim-Subscription-Key: ' . $api_key
-                )
-            );
-
-            $result = curl_exec($curl);
-            if (!$result) {die("Connection Failure");}
-            curl_close($curl);
-            echo $result;
-        };
-
-        function get_uuid() {
-            return sprintf(
-                '%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
-                mt_rand(0, 0xffff), mt_rand(0, 0xffff),
-                mt_rand(0, 0xffff),
-                mt_rand(0, 0x0fff) | 0x4000,
-                mt_rand(0, 0x3fff) | 0x8000,
-                mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
-            );
-        }
-        
-        function get_access_token() {
-            $credentials =base64_encode(USER_ID.':'.API_KEY);
-            $ch = curl_init('https://sandbox.momodeveloper.mtn.com/collection/token/');
-            curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-
-            curl_setopt(
-                $ch,
-                CURLOPT_HTTPHEADER,
-                array(
-                    'Authorization: Basic '.$credentials,
-                    'Content-Type : application/json',
-                    'Ocp-Apim-Subscription-Key: '.COLLECTION_SUBSCRIPTION_KEY
-                )
-            );
-            $response = curl_exec($ch);
-            $response = json_decode($response);
-
-            $access_token = $response->access_token;
-            if(!$access_tokenaccess){
-                throw new Exception("Invalid access token generated");
-                return FALSE;
-            }
-            return $access_token;
-        }
-
-        function request_pay(){
-            $access_token = get_access_token();
-            $endpoint_url = 'https://sandbox.momodeveloper.mtn.com/collection/v1_0/requesttopay';
-
-            $data = array(
-                "amount" => "1",
-                "currency" => "EUR",
-                "externalId" => "123456",
-
-                "payer" => array(
-                    "partyIdType" => "MSISDN",
-                    "partyId" => "254795107488"
-                ),
-
-                "payerMessage"=> "Payment Request",
-                "payeeNote"=> "Please confirm payment"
-            );
-
-            $data_string = json_encode($data);
-
-            $curl = curl_init();
-            curl_setopt($curl, CURLOPT_URL, $endpoint_url);
-            curl_setopt($curl, CURLOPT_CUSTOMREQUEST, "POST");
-            curl_setopt($curl, CURLOPT_POSTFIELDS, $data_string);
-
-            curl_setopt(
-                $curl,
-                CURLOPT_HTTPHEADER,
-                array(
-                    'Content-Type: application/json',
-                    'Authorization: Bearer '.$access_token,
-                    'X-Reference-Id: '.get_uuid(),
-                    'X-Target-Environment: sandbox',
-                    'Ocp-Apim-Subscription-Key: '.COLLECTION_SUBSCRIPTION_KEY,
-                )
-            );
-
-            curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
-            $curl_response = curl_exec($curl);
-        }
-    ?>
-</body>
-</html>
+    $body = array(
+        'amount' => '5.0',
+        'currency' => 'EUR',
+        "externalId" => $external_id,
+        'payer' => array(
+            'partyIdType' => 'MSISDN',
+            'partyId' => $phone
+        ),
+        'payerMessage' => 'Umeskia Softwares MTN Payment',
+        'payeeNote' => 'Thank you for using Umeskia Softwares MTN Payment'
+    );
+    $json_body = json_encode($body);
+    $curl = curl_init();
+    curl_setopt_array($curl, array(
+        CURLOPT_URL => $url,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST => true,
+        CURLOPT_HTTPHEADER => $headers,
+        CURLOPT_POSTFIELDS => $json_body
+    ));
+    $response = curl_exec($curl);
+    if(curl_errno($curl)) {
+        $error_msg = curl_error($curl);
+        echo "cURL Error: " . $error_msg;
+    }
+    curl_close($curl);
+    if (curl_errno($curl)) {
+    $error_msg = curl_error($curl);
+    echo "cURL Error: " . $error_msg;
+    } else {
+    $httpcode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+    curl_close($curl);
+    if ($httpcode == 202) {
+        echo 'Request successfully, Ref ID : '. $reference_id .' & response status code is : ' . $httpcode;
+    } else {
+        echo 'Request successfully, Response status code is : ' . $httpcode;
+        echo "<br>";
+        echo "Error : " . $response;
+    }
+    }
+?>
