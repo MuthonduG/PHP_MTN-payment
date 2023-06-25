@@ -18,4 +18,4 @@
     }
     curl_close($curl);
     echo $response;
-?>
+    
